@@ -14,20 +14,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import urllib.request
-from pathlib import Path
 
-CONFIG_FILE = Path.home() / ".d365fo-integration" / "config.json"
-
-import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # odata_get wraps urllib with safe_url applied automatically (handles spaces in $filter)
 from odata_utils import odata_get as _odata_get
 
 
-def get_company(app_name: str = "", token: str = "", base_url: str = "") -> dict:
+def get_company(app_name: str = "", token: str = "", base_url: str = "",
+                client_id: str = "") -> dict:
     """Resolve the default D365FO company (dataAreaId) for an Entra app.
 
     Performs two OData lookups:
@@ -39,13 +37,15 @@ def get_company(app_name: str = "", token: str = "", base_url: str = "") -> dict
     Parameters
     ----------
     app_name : str, optional
-        Friendly name matching a key in config.json ``entraApps``.
-        Resolved automatically from ``lastUsedEntraApp`` when omitted.
+        Environment name (= bws project name). Resolved automatically from the
+        last-used environment when omitted.
     token : str, optional
         Existing bearer token.  If empty, ``get_token`` is called automatically.
     base_url : str, optional
-        D365FO base URL.  If empty, read from config (requires ``app_name``
-        or ``lastUsedEntraApp`` to be set).
+        D365FO base URL.  If empty, it is obtained via ``get_token``.
+    client_id : str, optional
+        Entra app client id.  If empty, it is obtained via ``get_token`` /
+        ``bws_creds`` (no config file is read).
 
     Returns
     -------
@@ -66,21 +66,15 @@ def get_company(app_name: str = "", token: str = "", base_url: str = "") -> dict
         s  = get_token("EP prod")
         co = get_company(app_name=s["appName"], token=s["token"], base_url=s["baseUrl"])
     """
-    # If token not supplied, fetch it now
-    if not token or not base_url:
+    # If token / base_url / client_id not supplied, resolve them via get_token
+    # (which sources credentials from bws). get_token returns clientId too.
+    if not token or not base_url or not client_id:
         from get_token import get_token
         tok_result = get_token(app_name)
-        token    = tok_result["token"]
-        base_url = tok_result["baseUrl"]
-        app_name = tok_result["appName"]
-
-    # Resolve clientId for this app from config
-    config = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-    name   = app_name or config.get("lastUsedEntraApp", "")
-    if not name or name not in config.get("entraApps", {}):
-        print(f"App '{name}' not found in config.", file=sys.stderr)
-        sys.exit(1)
-    client_id = config["entraApps"][name]["clientId"]
+        token     = token     or tok_result["token"]
+        base_url  = base_url  or tok_result["baseUrl"]
+        client_id = client_id or tok_result["clientId"]
+        app_name  = tok_result["appName"]
 
     # Step 1: SysAADClients → UserId
     # Finds the D365FO user account that this Entra app impersonates

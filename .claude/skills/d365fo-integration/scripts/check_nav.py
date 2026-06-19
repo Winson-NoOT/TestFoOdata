@@ -70,12 +70,12 @@ def check_nav(entity: str, app_name: str = "",
         EntityType name to inspect (e.g. ``"BillOfMaterialsLinesV3"``).
         If not found by exact name, the singular form is tried automatically.
     app_name : str, optional
-        Friendly Entra app name.  Defaults to ``lastUsedEntraApp``.
+        Environment name (= bws project name).  Defaults to the last-used environment.
     token : str, optional
         Existing bearer token.  If empty, ``get_token`` is called automatically.
         Pass the token from ``init_session()`` to avoid a redundant token fetch.
     base_url : str, optional
-        D365FO base URL.  If empty, resolved from config via ``get_token``.
+        D365FO base URL.  If empty, resolved via ``get_token`` (creds from bws).
 
     Returns
     -------

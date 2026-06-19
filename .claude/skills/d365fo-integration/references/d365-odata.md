@@ -1,28 +1,25 @@
 # D365FO OData Usage
 
-## Step 1: Resolve Entra app
+## Step 1: Resolve the environment
 
-> **Picker vs widget:** This step uses a simple picker to select among already-configured apps. If the environment is unknown or not yet in `config.json`, the env gate onboarding flow (in `d365-env-gate.md`) handles credential collection via the interactive widget first.
+> Environments and credentials come entirely from Bitwarden Secrets Manager via the `bws` CLI — each bws project is one environment. See `references/d365-bws-resolve.md`. If the environment is unknown, run the env-gate onboarding flow (`d365-env-gate.md`) first.
 
-Read config from `~/.d365fo-integration/config.json` (or `D365FO_INTEGRATION_CONFIG`).
+**MANDATORY — do not skip or assume. Always resolve the environment FIRST — before drafting any query, before any API call, before any other action. The selected environment determines baseUrl and dataAreaId used in every query.**
 
-**MANDATORY — do not skip or assume. Always resolve the Entra app FIRST — before drafting any query, before any API call, before any other action. The selected app determines baseUrl and dataAreaId used in every query.**
+**If user specified an environment explicitly** OR **it was already established through the env gate this session:** use it directly, skip the steps below.
 
-**If user specified an app name explicitly** OR **the app name was already established through the env gate this session:** use it directly, skip the steps below.
+**If no environment is known, follow these rules in order:**
 
-**If no app is known, follow these rules in order:**
-
-1. Read `lastUsedEntraApp` and `entraApps` from config.
-2. If `entraApps` is empty or missing → STOP and tell user: *"No Entra apps configured. Please run the Entra app setup first."* Do not proceed.
-3. **Show a picker** using `ASK_TOOL`:
-   - List all apps, labeled as `"{name} — {baseUrl}"`.
-   - If `lastUsedEntraApp` is set, append `" (last used)"` to that option so the user can spot it quickly.
+1. List environments: `python3 <scripts>/bws_creds.py envs` (one per bws project).
+2. If none are returned → STOP and tell the user: *"No D365FO environments found in Bitwarden Secrets Manager. Check `BWS_ACCESS_TOKEN` and the bws projects."* Do not proceed.
+3. If exactly one exists, use it. Otherwise **show a picker** using `ASK_TOOL`:
+   - List all environment names. If a last-used environment exists (`bws_creds.get_last_env()`), append `" (last used)"` to it.
    - **STOP. Do not write any text, draft any query, or produce any output before or after calling the picker. Wait silently for the user's selection — it is the only thing that may appear.**
-   - Use the app the user selected.
+   - Use the environment the user selected.
 
-After any successful OData call: write the used app name back to `lastUsedEntraApp` in config.
+The last-used environment is tracked automatically by `resolve_creds` (`~/.d365fo-integration/last-env.txt`) — no manual step needed.
 
-Extract: `tenantId`, `clientId`, `clientSecret`, `baseUrl`.
+`init_session` resolves `tenantId`, `clientId`, `clientSecret`, and `baseUrl` from the project's secrets automatically.
 
 ## Step 2: Get access token
 

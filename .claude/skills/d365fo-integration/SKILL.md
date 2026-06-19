@@ -42,7 +42,7 @@ Output is the picker tool to use throughout this session. Store it mentally as `
 1. **Unclear intent?** Read `references/d365-clarify.md` before doing anything.
 2. **Before any query or API call** — run the environment gate: read `references/d365-env-gate.md`.
    - **"Give me a query" = test it first.** Default is always: execute the query, verify it works, then present the confirmed working result. The only exception is when the user **explicitly** says they do not need it tested (e.g. "just give me the query, I'll run it myself"). If tested, you **must** state in your response that the query was tested and confirmed working.
-3. **Config file missing?** Read `references/d365-config-create.md`. **Env not in existing config?** Read `references/d365-entra-app-setup.md` (Add flow).
+3. **Credentials come from `bws` (Bitwarden Secrets Manager) — there is no config file.** Each bws project is one environment. To resolve which environment/credentials to use, read `references/d365-bws-resolve.md`. Secret naming is not fixed — map by intent and ask the user when unclear.
 4. **No cross-session pattern trust.** Any query pattern confirmed in a previous session — including `$expand` paths, navigation property names, entity variants, company data areas, or `$filter` shapes — is **not** assumed valid in the current session. "Not assumed valid" means **you must re-test it this session before presenting it as an answer.** Do not present a remembered pattern as correct — execute it, check the response, then show the result.
 
 ---
@@ -53,9 +53,7 @@ Output is the picker tool to use throughout this session. Store it mentally as `
 |---|---|
 | Intent is ambiguous | `references/d365-clarify.md` |
 | Starting any query/script task — env check | `references/d365-env-gate.md` |
-| Config file missing / first-time setup | `references/d365-config-create.md` |
-| Manage Entra apps — add, edit, remove, list | `references/d365-entra-app-setup.md` |
-| App entry has `credentialSource: "bitwarden"` | `references/d365-bw-resolve.md` |
+| Resolve environment / credentials from `bws` | `references/d365-bws-resolve.md` |
 | OData query — single entity (read or write) | `references/d365-odata.md` + `references/d365-scripts.md` |
 | OData query — join / related entities | above + `references/d365-odata-efficiency.md` |
 | Performance, `$batch`, `$select`, token caching | `references/d365-odata-efficiency.md` |

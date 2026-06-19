@@ -181,7 +181,7 @@ def safe_dir_name(app_name: str) -> str:
     Parameters
     ----------
     app_name : str
-        Friendly app name from config.json (e.g. ``"EP prod"``).
+        Environment name (= bws project name, e.g. ``"Shaefer dev3"``).
 
     Returns
     -------
@@ -225,7 +225,7 @@ def ensure_metadata(app_name: str = "", force: bool = False) -> Path:
     Parameters
     ----------
     app_name : str, optional
-        Friendly Entra app name.  Defaults to ``lastUsedEntraApp`` from config.
+        Environment name (= bws project name).  Defaults to the last-used environment.
     force : bool, optional
         Re-fetch even if a cache already exists.  Default ``False``.
 

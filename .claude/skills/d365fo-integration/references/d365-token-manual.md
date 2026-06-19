@@ -2,14 +2,28 @@
 
 Use this only when `get_token.py` is not available at the path in `d365-scripts.md`.
 
+Credentials still come from Bitwarden Secrets Manager (`bws`) — there is no
+config file. Get the values for the chosen environment first:
+
+```bash
+# Inspect the project's secrets (keys + notes, no values):
+bws secret list <project-id>
+# Read an individual secret value:
+bws get secret <secret-id>
+```
+
+Map the secrets to tenant id / client id / client secret / base URL (the URL is
+normally in a secret's `note`; naming is not fixed — see `d365-bws-resolve.md`),
+then fetch the token:
+
 **Python (cross-platform, stdlib only):**
 ```python
 import json, time, urllib.parse, urllib.request
 
-tenant_id     = "YOUR_TENANT_ID"
-client_id     = "YOUR_CLIENT_ID"
-client_secret = "YOUR_CLIENT_SECRET"
-base_url      = "https://yourenv.operations.dynamics.com"
+tenant_id     = "YOUR_TENANT_ID"      # from bws
+client_id     = "YOUR_CLIENT_ID"      # from bws
+client_secret = "YOUR_CLIENT_SECRET"  # from bws
+base_url      = "https://yourenv.operations.dynamics.com"  # from bws secret note
 
 data = urllib.parse.urlencode({
     "grant_type":    "client_credentials",
