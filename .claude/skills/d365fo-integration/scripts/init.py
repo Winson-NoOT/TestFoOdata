@@ -41,8 +41,8 @@ def init_session(app_name: str = "") -> dict:
     Parameters
     ----------
     app_name : str, optional
-        Friendly name matching a key in config.json ``entraApps``.
-        Defaults to ``lastUsedEntraApp`` (same resolution as ``get_token``).
+        Environment name (= bws project name). Defaults to the last-used
+        environment (same resolution as ``get_token`` / ``bws_creds``).
 
     Returns
     -------
@@ -67,9 +67,10 @@ def init_session(app_name: str = "") -> dict:
     """
     tok = get_token(app_name)
     co  = get_company(
-        app_name = tok["appName"],
-        token    = tok["token"],
-        base_url = tok["baseUrl"],
+        app_name  = tok["appName"],
+        token     = tok["token"],
+        base_url  = tok["baseUrl"],
+        client_id = tok["clientId"],
     )
     return {**tok, **co}
 

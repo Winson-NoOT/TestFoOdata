@@ -7,9 +7,9 @@ These scripts live in the `scripts/` subfolder of this skill and are designed to
 | Script | Purpose | Returns (import) |
 |---|---|---|
 | `odata_utils.py` | Shared utilities: `find_skill_scripts()`, `safe_url()`, `odata_get/post/patch/delete()` | importable functions |
-| `config_manager.py` | Config CRUD — create, add, edit, remove, list, check | CLI only (no import) |
-| `init.py` | Orchestrator — runs get_token then get_company | `{"token", "baseUrl", "appName", "dataAreaId"}` |
-| `get_token.py` | Read config, check token cache, fetch new token if expired | `{"token", "baseUrl", "appName"}` |
+| `bws_creds.py` | Resolve credentials from Bitwarden Secrets Manager (`bws` CLI) — list environments/secrets, map tenant/client/secret/URL | `{"appName","tenantId","clientId","clientSecret","baseUrl"}` |
+| `init.py` | Orchestrator — runs get_token then get_company | `{"token", "baseUrl", "appName", "clientId", "dataAreaId"}` |
+| `get_token.py` | Resolve creds via bws, check token cache, fetch new token if expired | `{"token", "baseUrl", "appName", "clientId"}` |
 | `get_company.py` | Resolve default company from SysAADClients + SystemUsers | `{"dataAreaId"}` |
 | `check_nav.py` | Check `$metadata` for navigation properties on any entity | Console output listing nav prop names and types |
 | `get_metadata.py` | Fetch + cache $metadata as grep-friendly split files; search entities, enums, actions | CLI only / `ensure_metadata()` importable |
@@ -19,7 +19,7 @@ These scripts live in the `scripts/` subfolder of this skill and are designed to
 Scripts are bundled in the `scripts/` subfolder of this skill:
 
 ```
-scripts/config_manager.py
+scripts/bws_creds.py
 scripts/init.py
 scripts/get_token.py
 scripts/get_company.py
@@ -101,35 +101,55 @@ If no nav property → use `$batch` (see `d365-odata-efficiency.md` Section 5).
 ```python
 from init import init_session
 
-s = init_session("EP prod")   # app_name optional; defaults to lastUsedEntraApp
+s = init_session("EP prod")   # app_name optional; defaults to last-used environment
 # s["token"]       — bearer token string
 # s["baseUrl"]     — https://env.operations.dynamics.com
 # s["dataAreaId"]  — "ep" (lowercase)
 # s["appName"]     — "EP prod"
 ```
 
+## bws_creds.py — Behaviour
+
+- Sources all credentials from Bitwarden Secrets Manager via the `bws` CLI
+  (requires `BWS_ACCESS_TOKEN`). No config file.
+- `list_environments()` → `[{"id","name"}]` (one per bws project).
+- `list_secrets(project_id)` → raw secret objects (`key`/`value`/`note`/…).
+- `resolve_creds(env)` → `{"appName","tenantId","clientId","clientSecret","baseUrl"}`.
+  Maps secrets with **tolerant heuristics** (keys are not fixed); base URL comes
+  from a secret `note` that looks like a URL. Saves the chosen env to
+  `~/.d365fo-integration/last-env.txt`.
+- On an unmappable project it raises an error listing every secret key + note
+  so you can inspect and map manually (see `d365-bws-resolve.md`).
+
+**CLI:**
+```bash
+python3 scripts/bws_creds.py envs                  # list environments
+python3 scripts/bws_creds.py secrets "Shaefer dev3"  # list keys + notes (no values)
+python3 scripts/bws_creds.py resolve "Shaefer dev3"  # resolved creds (secret masked)
+```
+
 ## get_token.py — Behaviour
 
-- Reads config from `~/.d365fo-integration/config.json`
-- If multiple apps and none specified: prompts user to select by index (`input()`)
-- Reuses cached token if `expiresAt > now + 60s`
+- Resolves credentials via `bws_creds.resolve_creds(app_name)` (no config file)
+- Reuses cached token if `expiresAt > now + 60s` (cache: `~/.d365fo-integration/token-cache.json`, keyed by env name)
 - Otherwise fetches new token via `client_credentials` and writes back to cache
-- Updates `lastUsedEntraApp` in config after fetch
-- Returns `{"token", "baseUrl", "appName"}`
+- Last-used environment is tracked by `bws_creds` (`last-env.txt`)
+- Returns `{"token", "baseUrl", "appName", "clientId"}`
 
 **Quick call:**
 ```python
 from get_token import get_token
 
-t = get_token("EP prod")    # app_name optional
+t = get_token("Shaefer dev3")    # app_name optional → last-used / sole env
 # t["token"]    — bearer token string
 # t["baseUrl"]  — D365FO base URL
-# t["appName"]  — resolved app name
+# t["appName"]  — resolved environment name
+# t["clientId"] — Entra app client id
 ```
 
 **CLI (verify token fetches correctly):**
 ```bash
-python3 scripts/get_token.py --app "EP prod"
+python3 scripts/get_token.py --app "Shaefer dev3"
 ```
 
 ## get_company.py — Behaviour
